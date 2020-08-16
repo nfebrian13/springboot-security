@@ -100,6 +100,45 @@
 			"response": []
 		},
 		{
+			"name": "/auth/signup",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJzcHJpbmdib290LWp3dC1kZW1vIiwic3ViIjoiYWRtaW4iLCJhdWQiOiJ3ZWIiLCJpYXQiOjE1OTc1OTExOTksImV4cCI6MTU5NzU5MTQ5OX0.mHV-bQhthTBG0mVWJ9P2HmSAGJwDh5mpNSMR0jek84WkPAFsLAMi8J-zvDdRj-2cDKx2y4DKgMscmFfANPDjZA",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"tari\",\r\n    \"password\": \"password\",\r\n    \"firstName\": \"tari\",\r\n    \"lastName\": \"utari\",\r\n    \"email\": \"tari@gmail.com\",\r\n    \"phoneNumber\": \"082240256785\",\r\n    \"enabled\": true,\r\n    \"authorities\": [\"user\", \"admin\"]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/auth/signup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"auth",
+						"signup"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "/auth/login",
 			"request": {
 				"method": "POST",
@@ -153,6 +192,15 @@
 			"request": {
 				"method": "POST",
 				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"oldPassword\": \"user\",\r\n    \"newPassword\": \"user\"\r\n}    \r\n    ",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
 				"url": {
 					"raw": "http://localhost:8080/auth/change-password",
 					"protocol": "http",
