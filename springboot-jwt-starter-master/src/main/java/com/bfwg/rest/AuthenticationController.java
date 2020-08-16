@@ -1,11 +1,16 @@
 package com.bfwg.rest;
 
-import com.bfwg.common.DeviceProvider;
-import com.bfwg.model.User;
-import com.bfwg.model.UserTokenState;
-import com.bfwg.security.TokenHelper;
-import com.bfwg.security.auth.JwtAuthenticationRequest;
-import com.bfwg.service.impl.CustomUserDetailsService;
+import java.io.IOException;
+import java.security.Principal;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.MediaType;
@@ -17,100 +22,157 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.security.Principal;
-import java.util.HashMap;
-import java.util.Map;
+import com.bfwg.common.DeviceProvider;
+import com.bfwg.dto.UserRequest;
+import com.bfwg.model.Authority;
+import com.bfwg.model.User;
+import com.bfwg.model.UserRoleName;
+import com.bfwg.model.UserTokenState;
+import com.bfwg.repository.AuthorityRepository;
+import com.bfwg.repository.UserRepository;
+import com.bfwg.response.MessageResponse;
+import com.bfwg.security.TokenHelper;
+import com.bfwg.security.auth.JwtAuthenticationRequest;
+import com.bfwg.service.impl.CustomUserDetailsService;
 
 /**
  * Created by fan.jin on 2017-05-10.
  */
 
 @RestController
-@RequestMapping( value = "/auth", produces = MediaType.APPLICATION_JSON_VALUE )
+@RequestMapping(value = "/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 public class AuthenticationController {
 
-    @Autowired
-    TokenHelper tokenHelper;
+	@Autowired
+	TokenHelper tokenHelper;
 
-    @Lazy
-    @Autowired
-    private AuthenticationManager authenticationManager;
+	@Lazy
+	@Autowired
+	private AuthenticationManager authenticationManager;
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+	@Autowired
+	private CustomUserDetailsService userDetailsService;
 
-    @Autowired
-    private DeviceProvider deviceProvider;
+	@Autowired
+	private DeviceProvider deviceProvider;
 
-    @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public ResponseEntity<?> createAuthenticationToken(
-            @RequestBody JwtAuthenticationRequest authenticationRequest,
-            HttpServletResponse response,
-            Device device
-    ) throws AuthenticationException, IOException {
+	@Autowired
+	private UserRepository userRepository;
 
-        // Perform the security
-        final Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        authenticationRequest.getUsername(),
-                        authenticationRequest.getPassword()
-                )
-        );
+	@Autowired
+	private AuthorityRepository authorityRepository;
 
-        // Inject into security context
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+	@Autowired
+	private PasswordEncoder encoder;
 
-        // token creation
-        User user = (User)authentication.getPrincipal();
-        String jws = tokenHelper.generateToken( user.getUsername(), device);
-        int expiresIn = tokenHelper.getExpiredIn(device);
-        // Return the token
-        return ResponseEntity.ok(new UserTokenState(jws, expiresIn));
-    }
+	@RequestMapping(value = "/login", method = RequestMethod.POST)
+	public ResponseEntity<?> createAuthenticationToken(@RequestBody JwtAuthenticationRequest authenticationRequest,
+			HttpServletResponse response, Device device) throws AuthenticationException, IOException {
 
-    @RequestMapping(value = "/refresh", method = RequestMethod.POST)
-    public ResponseEntity<?> refreshAuthenticationToken(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Principal principal
-            ) {
+		// Perform the security
+		final Authentication authentication = authenticationManager
+				.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(),
+						authenticationRequest.getPassword()));
 
-        String authToken = tokenHelper.getToken( request );
+		// Inject into security context
+		SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        Device device = deviceProvider.getCurrentDevice(request);
+		// token creation
+		User user = (User) authentication.getPrincipal();
+		String jws = tokenHelper.generateToken(user.getUsername(), device);
+		int expiresIn = tokenHelper.getExpiredIn(device);
+		// Return the token
+		return ResponseEntity.ok(new UserTokenState(jws, expiresIn));
+	}
 
-        if (authToken != null && principal != null) {
+	@RequestMapping(value = "/refresh", method = RequestMethod.POST)
+	public ResponseEntity<?> refreshAuthenticationToken(HttpServletRequest request, HttpServletResponse response,
+			Principal principal) {
 
-            // TODO check user password last update
-            String refreshedToken = tokenHelper.refreshToken(authToken, device);
-            int expiresIn = tokenHelper.getExpiredIn(device);
+		String authToken = tokenHelper.getToken(request);
 
-            return ResponseEntity.ok(new UserTokenState(refreshedToken, expiresIn));
-        } else {
-            UserTokenState userTokenState = new UserTokenState();
-            return ResponseEntity.accepted().body(userTokenState);
-        }
-    }
+		Device device = deviceProvider.getCurrentDevice(request);
 
-    @RequestMapping(value = "/change-password", method = RequestMethod.POST)
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> changePassword(@RequestBody PasswordChanger passwordChanger) {
-        userDetailsService.changePassword(passwordChanger.oldPassword, passwordChanger.newPassword);
-        Map<String, String> result = new HashMap<>();
-        result.put( "result", "success" );
-        return ResponseEntity.accepted().body(result);
-    }
+		if (authToken != null && principal != null) {
 
-    static class PasswordChanger {
-        public String oldPassword;
-        public String newPassword;
-    }
+			// TODO check user password last update
+			String refreshedToken = tokenHelper.refreshToken(authToken, device);
+			int expiresIn = tokenHelper.getExpiredIn(device);
+
+			return ResponseEntity.ok(new UserTokenState(refreshedToken, expiresIn));
+		} else {
+			UserTokenState userTokenState = new UserTokenState();
+			return ResponseEntity.accepted().body(userTokenState);
+		}
+	}
+
+	@RequestMapping(value = "/change-password", method = RequestMethod.POST)
+	@PreAuthorize("hasRole('USER')")
+	public ResponseEntity<?> changePassword(@RequestBody PasswordChanger passwordChanger) {
+		userDetailsService.changePassword(passwordChanger.oldPassword, passwordChanger.newPassword);
+		Map<String, String> result = new HashMap<>();
+		result.put("result", "success");
+		return ResponseEntity.accepted().body(result);
+	}
+
+	/** 
+	 * @author NANA
+	 * Signup for new user
+	 * 
+	 * **/
+	@PostMapping("/signup")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResponseEntity<?> registerUser(@Valid @RequestBody UserRequest userRequest) {
+
+		if (userRepository.existsByUsername(userRequest.getUsername())) {
+			return ResponseEntity.badRequest().body(new MessageResponse("Username is already taken!"));
+		}
+		if (userRepository.existsByEmail(userRequest.getEmail())) {
+			return ResponseEntity.badRequest().body(new MessageResponse("Email is already in use!"));
+		}
+
+		User newUser = new User(userRequest.getFirstName(), encoder.encode(userRequest.getPassword()),
+				userRequest.getFirstName(), userRequest.getLastName(), userRequest.getEmail(),
+				userRequest.getPhoneNumber(), userRequest.isEnabled());
+
+		Set<Authority> roles = new HashSet<>();
+		Set<String> strAuthorities = userRequest.getAuthorities();
+
+		if (strAuthorities == null) {
+			Authority userRole = authorityRepository.findByName(UserRoleName.ROLE_USER)
+					.orElseThrow(() -> new RuntimeException("Role is not found."));
+			roles.add(userRole);
+		} else {
+			strAuthorities.forEach(role -> {
+				switch (role) {
+				case "admin":
+					Authority adminRole = authorityRepository.findByName(UserRoleName.ROLE_ADMIN)
+							.orElseThrow(() -> new RuntimeException("Role is not found."));
+					roles.add(adminRole);
+					break;
+				default:
+					Authority userRole = authorityRepository.findByName(UserRoleName.ROLE_USER)
+							.orElseThrow(() -> new RuntimeException("Role is not found."));
+					roles.add(userRole);
+				}
+			});
+		}
+
+		newUser.setAuthorities(roles);
+		userRepository.save(newUser);
+		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+
+	}
+
+	static class PasswordChanger {
+		public String oldPassword;
+		public String newPassword;
+	}
 }

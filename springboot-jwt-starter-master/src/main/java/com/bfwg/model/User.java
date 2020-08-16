@@ -19,6 +19,7 @@ import javax.persistence.Table;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by fan.jin on 2016-10-15.
@@ -58,13 +59,34 @@ public class User implements UserDetails {
     @Column(name = "last_password_reset_date")
     private Timestamp lastPasswordResetDate;
 
+    /*
     @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinTable(name = "user_authority",
             joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "authority_id", referencedColumnName = "id"))
-    private List<Authority> authorities;
+    private List<Authority> authorities; */
+    
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JoinTable(name = "user_authority",
+            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "authority_id", referencedColumnName = "id"))
+    private Set<Authority> authorities;
+    
+    public User() {
+    }
+    
+    public User(String username, String password, String firstName, String lastName, String email,
+			String phoneNumber, boolean enabled) {
+		this.username = username;
+		this.password = password;
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.email = email;
+		this.phoneNumber = phoneNumber;
+		this.enabled = enabled;
+	}
 
-    public Long getId() {
+	public Long getId() {
         return id;
     }
 
@@ -106,11 +128,10 @@ public class User implements UserDetails {
         this.lastName = lastName;
     }
 
-    public void setAuthorities(List<Authority> authorities) {
-        this.authorities = authorities;
-    }
-
-    @Override
+    public void setAuthorities(Set<Authority> authorities) {
+		this.authorities = authorities;
+	}
+	@Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return this.authorities;
     }
