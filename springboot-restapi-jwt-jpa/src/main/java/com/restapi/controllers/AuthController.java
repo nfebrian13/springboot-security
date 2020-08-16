@@ -52,6 +52,15 @@ public class AuthController {
 	@Autowired
 	JwtUtils jwtUtils;
 
+	/**
+	 * /api/auth/signin
+	 * - authenticate { username, pasword }
+	 * - update SecurityContext using Authentication object
+	 * - generate JWT
+	 * - get UserDetails from Authentication object
+	 * - response contains JWT and UserDetails data
+	 * **/
+	
 	@PostMapping("/signin")
 	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
@@ -69,16 +78,22 @@ public class AuthController {
 				new JwtResponse(userDetails.getId(), userDetails.getUsername(), userDetails.getEmail(), roles, jwt));
 	}
 
+	/**
+	 * /api/auth/signup
+	 * - check existing username/email
+	 * - create new User (with ROLE_USER if not specifying role)
+	 * - save User to database using UserRepository
+	 *  **/
+	
 	@PostMapping("/signup")
 	public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+		
 		if (userRepository.existsByUsername(signUpRequest.getUsername())) {
 			return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
 		}
-
 		if (userRepository.existsByEmail(signUpRequest.getEmail())) {
 			return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is already in use!"));
 		}
-
 		// Create new user's account
 		User user = new User(signUpRequest.getUsername(), signUpRequest.getEmail(),
 				encoder.encode(signUpRequest.getPassword()));

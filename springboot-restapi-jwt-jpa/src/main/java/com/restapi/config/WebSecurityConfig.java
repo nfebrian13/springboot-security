@@ -18,6 +18,13 @@ import com.restapi.security.jwt.AuthEntryPointJwt;
 import com.restapi.security.jwt.AuthTokenFilter;
 import com.restapi.security.services.UserDetailsServiceImpl;
 
+/** 
+ * @EnableWebSecurity allows Spring to find and automatically apply the class to the global Web Security.
+ * @EnableGlobalMethodSecurity provides AOP security on methods. It enables @PreAuthorize, @PostAuthoriz
+ * 
+ * **/
+
+
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(
@@ -25,6 +32,14 @@ import com.restapi.security.services.UserDetailsServiceImpl;
 		// jsr250Enabled = true,
 		prePostEnabled = true)
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	/** 
+	 * userDetailsService = Spring Security will load User details to perform 
+	 * authentication & authorization. 
+	 * The implementation of UserDetailsService will be used for configuring
+	 * DaoAuthenticationProvider by AuthenticationManagerBuilder.userDetailsService() method
+	 * **/
+	
 	@Autowired
 	UserDetailsServiceImpl userDetailsService;
 
@@ -54,11 +69,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		http.cors().and().csrf().disable().exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
-				.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().authorizeRequests()
-				.antMatchers("/api/auth/**").permitAll().antMatchers("/api/test/**").permitAll().anyRequest()
-				.authenticated();
-
+		http.cors().and().csrf().disable()
+			.exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
+			.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
+			.authorizeRequests().antMatchers("/api/auth/**").permitAll()
+			.antMatchers("/api/test/**").permitAll()
+			.anyRequest().authenticated();
 		http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 	}
+	
 }
