@@ -10,5 +10,9 @@ import java.util.List;
 public interface UserService {
     User findById(Long id);
     User findByUsername(String username);
+    User save(User user);
     List<User> findAll ();
+    
+    boolean existsByUsername (String username);
+    boolean existsByEmail (String email);
 }

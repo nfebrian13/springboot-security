@@ -35,11 +35,11 @@ import com.bfwg.model.Authority;
 import com.bfwg.model.User;
 import com.bfwg.model.UserRoleName;
 import com.bfwg.model.UserTokenState;
-import com.bfwg.repository.AuthorityRepository;
-import com.bfwg.repository.UserRepository;
 import com.bfwg.response.MessageResponse;
 import com.bfwg.security.TokenHelper;
 import com.bfwg.security.auth.JwtAuthenticationRequest;
+import com.bfwg.service.AuthorityService;
+import com.bfwg.service.UserService;
 import com.bfwg.service.impl.CustomUserDetailsService;
 
 /**
@@ -53,6 +53,12 @@ public class AuthenticationController {
 	@Autowired
 	TokenHelper tokenHelper;
 
+	@Autowired
+	private PasswordEncoder encoder;
+	
+	@Autowired
+	private DeviceProvider deviceProvider;
+	
 	@Lazy
 	@Autowired
 	private AuthenticationManager authenticationManager;
@@ -61,16 +67,10 @@ public class AuthenticationController {
 	private CustomUserDetailsService userDetailsService;
 
 	@Autowired
-	private DeviceProvider deviceProvider;
+	private UserService userService;
 
 	@Autowired
-	private UserRepository userRepository;
-
-	@Autowired
-	private AuthorityRepository authorityRepository;
-
-	@Autowired
-	private PasswordEncoder encoder;
+	private AuthorityService authorityService;
 
 	@RequestMapping(value = "/login", method = RequestMethod.POST)
 	public ResponseEntity<?> createAuthenticationToken(@RequestBody JwtAuthenticationRequest authenticationRequest,
@@ -122,19 +122,17 @@ public class AuthenticationController {
 		return ResponseEntity.accepted().body(result);
 	}
 
-	/** 
-	 * @author NANA
-	 * Signup for new user
-	 * 
-	 * **/
+	/**
+	 * @author NANA 16/08/2020 Signup for new user
+	 **/
 	@PostMapping("/signup")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<?> registerUser(@Valid @RequestBody UserRequest userRequest) {
 
-		if (userRepository.existsByUsername(userRequest.getUsername())) {
+		if (userService.existsByUsername(userRequest.getUsername())) {
 			return ResponseEntity.badRequest().body(new MessageResponse("Username is already taken!"));
 		}
-		if (userRepository.existsByEmail(userRequest.getEmail())) {
+		if (userService.existsByEmail(userRequest.getEmail())) {
 			return ResponseEntity.badRequest().body(new MessageResponse("Email is already in use!"));
 		}
 
@@ -146,19 +144,19 @@ public class AuthenticationController {
 		Set<String> strAuthorities = userRequest.getAuthorities();
 
 		if (strAuthorities == null) {
-			Authority userRole = authorityRepository.findByName(UserRoleName.ROLE_USER)
+			Authority userRole = authorityService.findByName(UserRoleName.ROLE_USER)
 					.orElseThrow(() -> new RuntimeException("Role is not found."));
 			roles.add(userRole);
 		} else {
 			strAuthorities.forEach(role -> {
 				switch (role) {
 				case "admin":
-					Authority adminRole = authorityRepository.findByName(UserRoleName.ROLE_ADMIN)
+					Authority adminRole = authorityService.findByName(UserRoleName.ROLE_ADMIN)
 							.orElseThrow(() -> new RuntimeException("Role is not found."));
 					roles.add(adminRole);
 					break;
 				default:
-					Authority userRole = authorityRepository.findByName(UserRoleName.ROLE_USER)
+					Authority userRole = authorityService.findByName(UserRoleName.ROLE_USER)
 							.orElseThrow(() -> new RuntimeException("Role is not found."));
 					roles.add(userRole);
 				}
@@ -166,7 +164,7 @@ public class AuthenticationController {
 		}
 
 		newUser.setAuthorities(roles);
-		userRepository.save(newUser);
+		userService.save(newUser);
 		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
 
 	}
