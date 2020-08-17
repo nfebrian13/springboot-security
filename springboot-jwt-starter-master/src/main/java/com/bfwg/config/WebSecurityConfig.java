@@ -28,17 +28,20 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
+    
+	@Autowired
+    TokenHelper tokenHelper;
+   
     @Autowired
     private CustomUserDetailsService jwtUserDetailsService;
 
     @Autowired
     private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     @Override
@@ -51,9 +54,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         auth.userDetailsService( jwtUserDetailsService )
             .passwordEncoder( passwordEncoder() );
     }
-
-    @Autowired
-    TokenHelper tokenHelper;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
